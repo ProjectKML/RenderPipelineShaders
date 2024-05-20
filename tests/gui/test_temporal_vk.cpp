@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -97,39 +97,7 @@ protected:
 
     virtual void OnRender(uint32_t frameIndex) override
     {
-        RpsRenderGraphBatchLayout batchLayout = {};
-        RpsResult                 result      = rpsRenderGraphGetBatchLayout(m_rpsRenderGraph, &batchLayout);
-        REQUIRE(result == RPS_OK);
-
-        ReserveSemaphores(batchLayout.numFenceSignals);
-
-        for (uint32_t iBatch = 0; iBatch < batchLayout.numCmdBatches; iBatch++)
-        {
-            auto& batch = batchLayout.pCmdBatches[iBatch];
-
-            ActiveCommandList cmdList = BeginCmdList(RPS_AFX_QUEUE_INDEX_GFX);
-
-            RpsRenderGraphRecordCommandInfo recordInfo = {};
-
-            recordInfo.pUserContext  = this;
-            recordInfo.cmdBeginIndex = batch.cmdBegin;
-            recordInfo.numCmds       = batch.numCmds;
-            recordInfo.hCmdBuffer    = rpsVKCommandBufferToHandle(cmdList.cmdBuf);
-
-            result = rpsRenderGraphRecordCommands(m_rpsRenderGraph, &recordInfo);
-            REQUIRE(result == RPS_OK);
-
-            EndCmdList(cmdList);
-
-            SubmitCmdLists(&cmdList,
-                           1,
-                           ((iBatch + 1) == batchLayout.numCmdBatches),
-                           batch.numWaitFences,
-                           batchLayout.pWaitFenceIndices + batch.waitFencesBegin,
-                           batch.signalFenceIndex);
-
-            RecycleCmdList(cmdList);
-        }
+        ExecuteRenderGraph(frameIndex, m_rpsRenderGraph);
     }
 
 private:

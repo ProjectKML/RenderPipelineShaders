@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -90,7 +90,7 @@ namespace rps
                     printer(" ]");
                 }
 
-                for (uint32_t iCmd = batchInfo.waitFencesBegin, cmdEnd = batchInfo.waitFencesBegin + batchInfo.numCmds;
+                for (uint32_t iCmd = batchInfo.cmdBegin, cmdEnd = batchInfo.cmdBegin + batchInfo.numCmds;
                      iCmd < cmdEnd;
                      iCmd++)
                 {

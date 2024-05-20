@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -403,9 +403,8 @@ namespace rps
 
         uint32_t FindNodeDeclIndexByName(const StrRef name) const
         {
-            auto iter = std::find_if(m_nodeDecls.begin(), m_nodeDecls.end(), [&](const auto& nodeDecl) {
-                return ((0 == strncmp(nodeDecl.name.str, name.str, name.len)) && (nodeDecl.name.str[name.len] == '\0'));
-            });
+            auto iter = std::find_if(
+                m_nodeDecls.begin(), m_nodeDecls.end(), [&](const auto& nodeDecl) { return (nodeDecl.name == name); });
             return (iter != m_nodeDecls.end()) ? uint32_t(iter - m_nodeDecls.begin()) : RPS_INDEX_NONE_U32;
         }
 

@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -65,6 +65,7 @@ namespace rps
         bool                    isAliased : 1;
         bool                    isPendingCreate : 1;
         bool                    isPendingInit : 1;
+        bool                    isAccessed : 1;
         bool                    isMutableFormat : 1;
         bool                    bBufferFormattedWrite : 1;
         bool                    bBufferFormattedRead : 1;

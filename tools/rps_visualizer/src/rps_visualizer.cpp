@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -172,12 +172,15 @@ namespace rps
             const size_t timelineMax           = m_timelinePosToCmdIdMap.size();
             const bool   bLifetimeBeginDefined = (resInfo.lifetimeBegin != ResourceInstance::LIFETIME_UNDEFINED);
             const bool   bLifetimeEndDefined   = (resInfo.lifetimeEnd != ResourceInstance::LIFETIME_UNDEFINED);
+            const bool   bHasAnyCmdVisInfo     = !cmdVisInfos.empty();
 
             if (resInfo.lifetimeBegin <= resInfo.lifetimeEnd)
             {
                 resourceVisInfos[iRes] = ResourceVisualizationInfo(
-                    bLifetimeBeginDefined ? cmdVisInfos[resInfo.lifetimeBegin].timelinePosition : 0,
-                    bLifetimeEndDefined ? cmdVisInfos[resInfo.lifetimeEnd].timelinePosition : uint32_t(timelineMax),
+                    (bLifetimeBeginDefined && bHasAnyCmdVisInfo) ? cmdVisInfos[resInfo.lifetimeBegin].timelinePosition
+                                                                 : 0,
+                    (bLifetimeEndDefined && bHasAnyCmdVisInfo) ? cmdVisInfos[resInfo.lifetimeEnd].timelinePosition
+                                                               : uint32_t(timelineMax),
                     pRenderGraph->GetResourceInstance(iRes).isAliased);
             }
         }

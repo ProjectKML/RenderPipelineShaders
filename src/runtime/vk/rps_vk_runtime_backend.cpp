@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2024 Advanced Micro Devices, Inc.
 //
 // This file is part of the AMD Render Pipeline Shaders SDK which is
-// released under the AMD INTERNAL EVALUATION LICENSE.
+// released under the MIT LICENSE.
 //
 // See file LICENSE.txt for full license details.
 
@@ -1498,7 +1498,7 @@ namespace rps
 
                     const bool bResHasMemoryBound = resInstance.hRuntimeResource && !resInstance.isPendingCreate;
 
-                    if (!resInstance.isAliased && bResHasMemoryBound &&
+                    if (resInstance.isAccessed && !resInstance.isAliased && bResHasMemoryBound &&
                         (resInstance.initialAccess.accessFlags != RPS_ACCESS_UNKNOWN))
                     {
                         for (auto& finalAccess :
