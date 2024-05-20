@@ -117,6 +117,7 @@ RpsResult rpsVKRuntimeDeviceCreate(const RpsVKRuntimeDeviceCreateInfo* pCreateIn
 /// @addtogroup RpsRenderGraphCommandRecordingVK
 /// @{
 
+#ifndef RPS_SKIP_OPAQUE_HANDLES
 /// @brief Mapping between <c><i>RpsRuntimeCommandBuffer</i></c> and <c><i>VkCommandBuffer</i></c>.
 RPS_IMPL_OPAQUE_HANDLE(VKCommandBuffer, RpsRuntimeCommandBuffer, VkCommandBuffer_T);
 
@@ -128,6 +129,7 @@ RPS_IMPL_OPAQUE_HANDLE(VKBuffer, RpsRuntimeResource, VkBuffer_T);
 
 /// @brief Mapping between <c><i>RpsRuntimeHeap</i></c> and <c><i>VkDeviceMemory</i></c>.
 RPS_IMPL_OPAQUE_HANDLE(VKMemory, RpsRuntimeHeap, VkDeviceMemory_T);
+#endif
 
 /// @brief Gets an array of VK image view handles from an image resource node argument.
 ///
