@@ -68,7 +68,9 @@ typedef uint32_t RpsVKRuntimeFlags;
     TABLE_ENTRY(vkCmdCopyBuffer) \
     TABLE_ENTRY(vkCmdCopyImageToBuffer) \
     TABLE_ENTRY(vkCmdCopyBufferToImage) \
-    TABLE_ENTRY(vkCmdResolveImage)
+    TABLE_ENTRY(vkCmdResolveImage) \
+    TABLE_ENTRY(vkCmdBeginRendering) \
+    TABLE_ENTRY(vkCmdEndRendering)
 
 // Macro for declaring a dispatch table entry from their call name. Internal use only. Do not use!!!
 #define RPS_VK_DECLARE_VK_FUNCTION_PROTOTYPE(callName) PFN_##callName callName;

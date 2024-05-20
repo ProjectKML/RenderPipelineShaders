@@ -613,7 +613,12 @@ namespace rps
 
         RPS_V_RETURN(CreateBufferViews(context, bufViews.range_all()));
         RPS_V_RETURN(CreateImageViews(context, imgViews.range_all()));
-        RPS_V_RETURN(CreateRenderPasses(context, renderPassCmdIndices.range_all()));
+
+        const bool bPreferRenderPasses = rpsAnyBitsSet(m_device.GetRuntimeFlags(), RPS_VK_RUNTIME_FLAG_PREFER_RENDER_PASS);
+        if (bPreferRenderPasses)
+        {
+            RPS_V_RETURN(CreateRenderPasses(context, renderPassCmdIndices.range_all()));
+        }
 
         return RPS_OK;
     }
@@ -662,6 +667,69 @@ namespace rps
         vp.height = -vp.height;
     }
 
+    static constexpr bool StencilOp    = true;
+    static constexpr bool NonStencilOp = false;
+
+    template <bool IsStencil = NonStencilOp>
+    VkAttachmentLoadOp GetVkLoadOp(const CmdAccessInfo& access, const NodeDeclRenderPassInfo& rpInfo)
+    {
+        // For depth stencil, need additional clear flags from rpInfo in case we want to clear only depth or stencil aspect.
+        const bool bIsDepthStencil = !!(access.access.accessFlags & RPS_ACCESS_DEPTH_STENCIL);
+        const bool bShouldClearDepthStencil =
+            IsStencil ? (rpInfo.clearDepth && (access.access.accessFlags & RPS_ACCESS_DEPTH))
+                      : (rpInfo.clearStencil && (access.access.accessFlags & RPS_ACCESS_STENCIL));
+
+        static constexpr RpsAccessFlags DiscardAccessMask =
+            (IsStencil ? RPS_ACCESS_STENCIL_DISCARD_DATA_BEFORE_BIT : RPS_ACCESS_DISCARD_DATA_BEFORE_BIT);
+
+        if (bShouldClearDepthStencil || (!bIsDepthStencil && (access.access.accessFlags & RPS_ACCESS_CLEAR_BIT)))
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        else if (access.access.accessFlags & DiscardAccessMask)
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        else
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+    }
+
+    template <bool IsStencil = NonStencilOp>
+    VkAttachmentStoreOp GetVkStoreOp(const CmdAccessInfo& access, bool bStoreOpNoneSupported)
+    {
+        static constexpr RpsAccessFlags DiscardAccessMask =
+            (IsStencil ? RPS_ACCESS_STENCIL_DISCARD_DATA_AFTER_BIT : RPS_ACCESS_DISCARD_DATA_AFTER_BIT);
+
+        static constexpr RpsAccessFlags NonStencilWriteAccessMask =
+            (RPS_ACCESS_ALL_GPU_WRITE & (~RPS_ACCESS_STENCIL_WRITE_BIT));
+
+#ifdef RPS_VK_ATTACHMENT_STORE_OP_NONE
+        if (bStoreOpNoneSupported &&
+            !(access.access.accessFlags & (IsStencil ? RPS_ACCESS_STENCIL_WRITE_BIT : NonStencilWriteAccessMask)))
+            return RPS_VK_ATTACHMENT_STORE_OP_NONE;
+#endif
+
+        if (access.access.accessFlags & DiscardAccessMask)
+            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        return VK_ATTACHMENT_STORE_OP_STORE;
+    }
+
+    VkAttachmentLoadOp GetVkStencilLoadOp(const CmdAccessInfo& access, const NodeDeclRenderPassInfo& rpInfo)
+    {
+        if (access.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
+            return GetVkLoadOp<StencilOp>(access, rpInfo);
+        else
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+
+    VkAttachmentStoreOp GetVkStencilStoreOp(const CmdAccessInfo& access, bool bLoadStoreOpNoneSupported)
+    {
+        if (access.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
+            return GetVkStoreOp<StencilOp>(access, bLoadStoreOpNoneSupported);
+        else
+            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    }
+
+    static constexpr bool UseRenderPassBarriersTrue  = true;
+    static constexpr bool UseRenderPassBarriersFalse = false;
+
     RpsResult VKRuntimeBackend::RecordCmdRenderPassBegin(const RuntimeCmdCallbackContext& context) const
     {
         auto& renderGraph  = *context.pRenderGraph;
@@ -681,43 +749,179 @@ namespace rps
         const bool bToExecSecondaryCmdBuf =
             rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_EXECUTE_SECONDARY_COMMAND_BUFFERS);
 
-        const bool bIsSecondaryCmdBuffer =
-            rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_SECONDARY_COMMAND_BUFFER);
-
-        RPS_CHECK_ARGS(!(bToExecSecondaryCmdBuf && bIsSecondaryCmdBuffer));
-
-        // TODO: Simplify conditions & share with EndRP.
-        //
-        // Skip vkCmdBeginRenderPass if:
-        //  - Is called on secondary cmd buffer, in which case we may only setup Viewports / Scissor states.
-        //  - User indicated the cmd callback will do custom RP.
-        //  - RP info missing.
-        const bool bBeginVKRenderPass = !bIsSecondaryCmdBuffer &&
-                                        !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT) &&
-                                        (runtimeCmd.renderPassId != RPS_INDEX_NONE_U32);
+        const bool bPreferRenderPasses = rpsAnyBitsSet(m_device.GetRuntimeFlags(), RPS_VK_RUNTIME_FLAG_PREFER_RENDER_PASS);
 
         auto& cmdRpInfo = *pCmdInfo->pRenderPassInfo;
 
-        // Begin RenderPass
-        if (bBeginVKRenderPass)
+        if (bPreferRenderPasses)
         {
-            auto& defaultRenderArea = cmdRpInfo.viewportInfo.defaultRenderArea;
+            const bool bIsSecondaryCmdBuffer =
+                rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
-            VkRenderPassBeginInfo rpBegin = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+            RPS_CHECK_ARGS(!(bToExecSecondaryCmdBuf && bIsSecondaryCmdBuffer));
 
-            auto& currResources = m_frameResources[m_currentResourceFrame];
+            // TODO: Simplify conditions & share with EndRP.
+            //
+            // Skip vkCmdBeginRenderPass if:
+            //  - Is called on secondary cmd buffer, in which case we may only setup Viewports / Scissor states.
+            //  - User indicated the cmd callback will do custom RP.
+            //  - RP info missing.
+            const bool bBeginVKRenderPass = !bIsSecondaryCmdBuffer &&
+                                            !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT) &&
+                                            (runtimeCmd.renderPassId != RPS_INDEX_NONE_U32);
 
-            rpBegin.renderPass      = currResources.renderPasses[runtimeCmd.renderPassId];
-            rpBegin.framebuffer     = currResources.frameBuffers[runtimeCmd.frameBufferId];
-            rpBegin.renderArea      = VkRect2D{{defaultRenderArea.x, defaultRenderArea.y},
-                                               {uint32_t(defaultRenderArea.width), uint32_t(defaultRenderArea.height)}};
-            rpBegin.clearValueCount = uint32_t(runtimeCmd.clearValues.size());
-            rpBegin.pClearValues    = runtimeCmd.clearValues.data();
+            // Begin RenderPass
+            if (bBeginVKRenderPass)
+            {
+                auto& defaultRenderArea = cmdRpInfo.viewportInfo.defaultRenderArea;
 
-            const VkSubpassContents subpassContent =
-                bToExecSecondaryCmdBuf ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE;
+                VkRenderPassBeginInfo rpBegin = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
 
-            RPS_VK_API_CALL(vkCmdBeginRenderPass(hVkCmdBuf, &rpBegin, subpassContent));
+                auto& currResources = m_frameResources[m_currentResourceFrame];
+
+                rpBegin.renderPass      = currResources.renderPasses[runtimeCmd.renderPassId];
+                rpBegin.framebuffer     = currResources.frameBuffers[runtimeCmd.frameBufferId];
+                rpBegin.renderArea      = VkRect2D{{defaultRenderArea.x, defaultRenderArea.y},
+                                                   {uint32_t(defaultRenderArea.width), uint32_t(defaultRenderArea.height)}};
+                rpBegin.clearValueCount = uint32_t(runtimeCmd.clearValues.size());
+                rpBegin.pClearValues    = runtimeCmd.clearValues.data();
+
+                const VkSubpassContents subpassContent =
+                    bToExecSecondaryCmdBuf ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE;
+
+                RPS_VK_API_CALL(vkCmdBeginRenderPass(hVkCmdBuf, &rpBegin, subpassContent));
+            }
+        }
+        else
+        {
+            const bool bBeginVKRendering = !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT);
+
+            if (bBeginVKRendering)
+            {
+                const auto& cmdAccesses = context.pRenderGraph->GetCmdAccessInfos();
+                auto cmdDescriptorIndices =
+                    m_accessToDescriptorMap.range(pCmdInfo->accesses.GetBegin(), pCmdInfo->accesses.size());
+                auto cmdAccessInfos = pCmdInfo->accesses.Get(cmdAccesses);
+
+                auto& currResources = m_frameResources[m_currentResourceFrame];
+
+                auto& defaultRenderArea = cmdRpInfo.viewportInfo.defaultRenderArea;
+
+                const bool bStoreOpNoneSupported =
+                    rpsAnyBitsSet(m_device.GetRuntimeFlags(), RPS_VK_RUNTIME_FLAG_STORE_OP_NONE_SUPPORTED);
+
+                VkRenderingInfo renderingInfo = {VK_STRUCTURE_TYPE_RENDERING_INFO};
+
+                const bool bIsRenderPassResuming = rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_RESUMING);
+
+                if (bIsRenderPassResuming)
+                {
+                    renderingInfo.flags |= VK_RENDERING_RESUMING_BIT;
+                }
+
+                renderingInfo.renderArea = VkRect2D{{defaultRenderArea.x, defaultRenderArea.y},
+                                              {uint32_t(defaultRenderArea.width), uint32_t(defaultRenderArea.height)}};
+                renderingInfo.layerCount = 1; //TODO
+
+                uint32_t numColorAttachments = 0;
+
+                VkRenderingAttachmentInfo colorAttachments[RPS_MAX_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+                VkRenderingAttachmentInfo depthAttachment = {}, stencilAttachment = {};
+
+                if (nodeDeclInfo.pRenderPassInfo)
+                {
+                    auto& rpInfo = *nodeDeclInfo.pRenderPassInfo;
+
+                    auto     clearColorValueRefs  = rpInfo.GetRenderTargetClearValueRefs();
+                    uint32_t clearColorValueIndex = 0;
+
+                    for (auto& rtParamRef : rpInfo.GetRenderTargetRefs())
+                    {
+                        auto& paramAccessInfo = nodeDeclInfo.params[rtParamRef.paramId];
+                        auto  descriptorIndices =
+                            cmdDescriptorIndices.range(paramAccessInfo.accessOffset, paramAccessInfo.numElements);
+
+                        const uint32_t imgViewIndex = descriptorIndices[rtParamRef.arrayOffset];
+
+                        const uint32_t colorAttachmentIndex = paramAccessInfo.baseSemanticIndex + rtParamRef.arrayOffset;
+                        auto& accessInfo = cmdAccessInfos[paramAccessInfo.accessOffset + rtParamRef.arrayOffset];
+
+                        auto& colorAttachment = colorAttachments[numColorAttachments++];
+                        colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+                        colorAttachment.imageView = currResources.imageViews[imgViewIndex];
+                        colorAttachment.imageLayout = GetVkImageLayout<IsSrcLayoutTrue>(accessInfo.access);
+                        colorAttachment.loadOp = GetVkLoadOp(accessInfo, rpInfo);
+                        colorAttachment.storeOp = GetVkStoreOp(accessInfo, bStoreOpNoneSupported);
+
+                        if ((!bIsRenderPassResuming) && (rpInfo.renderTargetClearMask & (1u << colorAttachmentIndex))) //TODO: is index shift correct?
+                        {
+                            auto clearValueRef = clearColorValueRefs[clearColorValueIndex];
+
+                            auto pClearColor = static_cast<const RpsClearColorValue*>(
+                                                   cmd.args[clearValueRef.paramId])[clearValueRef.arrayOffset]
+                                                   .float32;
+
+                            colorAttachment.clearValue.color.float32[0] = pClearColor[0];
+                            colorAttachment.clearValue.color.float32[1] = pClearColor[1];
+                            colorAttachment.clearValue.color.float32[2] = pClearColor[2];
+                            colorAttachment.clearValue.color.float32[3] = pClearColor[3];
+
+                            clearColorValueIndex++;
+                        }
+                    }
+
+                    if (rpInfo.depthStencilTargetMask)
+                    {
+                        auto& dsvParamRef     = *rpInfo.GetDepthStencilRef();
+                        auto& paramAccessInfo = nodeDeclInfo.params[dsvParamRef.paramId];
+                        RPS_ASSERT(paramAccessInfo.numElements == 1);
+
+                        const uint32_t imgViewIndex = cmdDescriptorIndices[paramAccessInfo.accessOffset];
+                        const VkImageView imgView = currResources.imageViews[imgViewIndex];
+
+                        auto& accessInfo = cmdAccessInfos[paramAccessInfo.accessOffset + dsvParamRef.arrayOffset];
+
+                        if (accessInfo.access.accessFlags & (RPS_ACCESS_DEPTH_WRITE_BIT | RPS_ACCESS_DEPTH_READ_BIT)) //TODO: civ
+                        {
+                            depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+                            depthAttachment.imageView = imgView;
+                            depthAttachment.imageLayout = GetVkImageLayout<IsSrcLayoutTrue>(accessInfo.access);
+                            depthAttachment.loadOp = GetVkLoadOp(accessInfo, rpInfo);
+                            depthAttachment.storeOp = GetVkStoreOp(accessInfo, bStoreOpNoneSupported);
+
+                            if (rpInfo.clearDepth)
+                            {
+                                auto pClearValueRef = rpInfo.GetDepthClearValueRef();
+                                depthAttachment.clearValue.depthStencil.depth = static_cast<const float*>(cmd.args[pClearValueRef->paramId])[0];
+                            }
+
+                            renderingInfo.pDepthAttachment = &depthAttachment;
+                        }
+
+                        if (accessInfo.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
+                        {
+                            stencilAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+                            stencilAttachment.imageView = imgView;
+                            stencilAttachment.imageLayout = GetVkImageLayout<IsSrcLayoutTrue>(accessInfo.access);
+                            stencilAttachment.loadOp = GetVkStencilLoadOp(accessInfo, rpInfo);
+                            stencilAttachment.storeOp = GetVkStencilStoreOp(accessInfo, bStoreOpNoneSupported);
+
+                            if (rpInfo.clearStencil)
+                            {
+                                auto pClearValueRef = rpInfo.GetStencilClearValueRef();
+                                stencilAttachment.clearValue.depthStencil.stencil = static_cast<const uint32_t*>(cmd.args[pClearValueRef->paramId])[0];
+                            }
+
+                            renderingInfo.pStencilAttachment = &stencilAttachment;
+                        }
+                    }
+                }
+
+                renderingInfo.colorAttachmentCount = numColorAttachments;
+                renderingInfo.pColorAttachments = colorAttachments;
+
+                RPS_VK_API_CALL(vkCmdBeginRendering(hVkCmdBuf, &renderingInfo));
+            }
         }
 
         // Setup Viewport / Scissor states
@@ -773,16 +977,30 @@ namespace rps
 
         const auto cmdCbFlags = context.bIsCmdBeginEnd ? cmd.callback.flags : RPS_CMD_CALLBACK_FLAG_NONE;
 
-        const bool bIsSecondaryCmdBuffer =
-            rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+        const bool bPreferRenderPasses = rpsAnyBitsSet(m_device.GetRuntimeFlags(), RPS_VK_RUNTIME_FLAG_PREFER_RENDER_PASS);
 
-        const bool bEndVKRenderPass = !bIsSecondaryCmdBuffer &&
-                                      !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT) &&
-                                      (runtimeCmd.renderPassId != RPS_INDEX_NONE_U32);
-
-        if (bEndVKRenderPass)
+        if (bPreferRenderPasses)
         {
-            RPS_VK_API_CALL(vkCmdEndRenderPass(GetContextVkCmdBuf(context)));
+            const bool bIsSecondaryCmdBuffer =
+                rpsAnyBitsSet(context.renderPassFlags, RPS_RUNTIME_RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+
+            const bool bEndVKRenderPass = !bIsSecondaryCmdBuffer &&
+                                          !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT) &&
+                                          (runtimeCmd.renderPassId != RPS_INDEX_NONE_U32);
+
+            if (bEndVKRenderPass)
+            {
+                RPS_VK_API_CALL(vkCmdEndRenderPass(GetContextVkCmdBuf(context)));
+            }
+        }
+        else
+        {
+            const bool bEndVKRendering = !rpsAnyBitsSet(cmdCbFlags, RPS_CMD_CALLBACK_CUSTOM_RENDER_TARGETS_BIT);
+
+            if (bEndVKRendering)
+            {
+                RPS_VK_API_CALL(vkCmdEndRendering(GetContextVkCmdBuf(context))); //TODO: CIV
+            }
         }
 
         return RPS_OK;
@@ -1013,69 +1231,6 @@ namespace rps
 
         return RPS_OK;
     }
-
-    static constexpr bool StencilOp    = true;
-    static constexpr bool NonStencilOp = false;
-
-    template <bool IsStencil = NonStencilOp>
-    VkAttachmentLoadOp GetVkLoadOp(const CmdAccessInfo& access, const NodeDeclRenderPassInfo& rpInfo)
-    {
-        // For depth stencil, need additional clear flags from rpInfo in case we want to clear only depth or stencil aspect.
-        const bool bIsDepthStencil = !!(access.access.accessFlags & RPS_ACCESS_DEPTH_STENCIL);
-        const bool bShouldClearDepthStencil =
-            IsStencil ? (rpInfo.clearDepth && (access.access.accessFlags & RPS_ACCESS_DEPTH))
-                      : (rpInfo.clearStencil && (access.access.accessFlags & RPS_ACCESS_STENCIL));
-
-        static constexpr RpsAccessFlags DiscardAccessMask =
-            (IsStencil ? RPS_ACCESS_STENCIL_DISCARD_DATA_BEFORE_BIT : RPS_ACCESS_DISCARD_DATA_BEFORE_BIT);
-
-        if (bShouldClearDepthStencil || (!bIsDepthStencil && (access.access.accessFlags & RPS_ACCESS_CLEAR_BIT)))
-            return VK_ATTACHMENT_LOAD_OP_CLEAR;
-        else if (access.access.accessFlags & DiscardAccessMask)
-            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        else
-            return VK_ATTACHMENT_LOAD_OP_LOAD;
-    }
-
-    template <bool IsStencil = NonStencilOp>
-    VkAttachmentStoreOp GetVkStoreOp(const CmdAccessInfo& access, bool bStoreOpNoneSupported)
-    {
-        static constexpr RpsAccessFlags DiscardAccessMask =
-            (IsStencil ? RPS_ACCESS_STENCIL_DISCARD_DATA_AFTER_BIT : RPS_ACCESS_DISCARD_DATA_AFTER_BIT);
-
-        static constexpr RpsAccessFlags NonStencilWriteAccessMask =
-            (RPS_ACCESS_ALL_GPU_WRITE & (~RPS_ACCESS_STENCIL_WRITE_BIT));
-
-#ifdef RPS_VK_ATTACHMENT_STORE_OP_NONE
-        if (bStoreOpNoneSupported &&
-            !(access.access.accessFlags & (IsStencil ? RPS_ACCESS_STENCIL_WRITE_BIT : NonStencilWriteAccessMask)))
-            return RPS_VK_ATTACHMENT_STORE_OP_NONE;
-#endif
-
-        if (access.access.accessFlags & DiscardAccessMask)
-            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-        return VK_ATTACHMENT_STORE_OP_STORE;
-    }
-
-    VkAttachmentLoadOp GetVkStencilLoadOp(const CmdAccessInfo& access, const NodeDeclRenderPassInfo& rpInfo)
-    {
-        if (access.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
-            return GetVkLoadOp<StencilOp>(access, rpInfo);
-        else
-            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    }
-
-    VkAttachmentStoreOp GetVkStencilStoreOp(const CmdAccessInfo& access, bool bLoadStoreOpNoneSupported)
-    {
-        if (access.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
-            return GetVkStoreOp<StencilOp>(access, bLoadStoreOpNoneSupported);
-        else
-            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    }
-
-    static constexpr bool UseRenderPassBarriersTrue  = true;
-    static constexpr bool UseRenderPassBarriersFalse = false;
 
     template <bool bUseRenderPassBarriers>
     static inline void GetVkAttachmentDescription(VkAttachmentDescription*      pOut,
@@ -1498,7 +1653,7 @@ namespace rps
 
                     const bool bResHasMemoryBound = resInstance.hRuntimeResource && !resInstance.isPendingCreate;
 
-                    if (resInstance.isAccessed && !resInstance.isAliased && bResHasMemoryBound &&
+                    if (!resInstance.isAliased && bResHasMemoryBound &&
                         (resInstance.initialAccess.accessFlags != RPS_ACCESS_UNKNOWN))
                     {
                         for (auto& finalAccess :
