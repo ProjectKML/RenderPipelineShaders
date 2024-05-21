@@ -254,7 +254,7 @@ RpsFormat rpsFormatFromVK(VkFormat vkFormat)
         RPS_FORMAT_R32G32B32A32_SINT,           // VK_FORMAT_R32G32B32A32_SINT
         RPS_FORMAT_R32G32B32A32_FLOAT,          // VK_FORMAT_R32G32B32A32_SFLOAT
         RPS_FORMAT_R64_UINT,                    // VK_FORMAT_R64_UINT
-        RPS_FORMAT_R64_INT,                     // VK_FORMAT_R64_SINT
+        RPS_FORMAT_R64_SINT,                    // VK_FORMAT_R64_SINT
         RPS_FORMAT_R64_FLOAT,                   // VK_FORMAT_R64_SFLOAT
         RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64G64_UINT
         RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64G64_SINT
