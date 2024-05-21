@@ -127,6 +127,9 @@ uint32_t rpsGetFormatElementBytes(RpsFormat format)
         0,   // RPS_FORMAT_P8,
         0,   // RPS_FORMAT_A8P8,
         2,   // RPS_FORMAT_B4G4R4A4_UNORM,
+        8,   // RPS_FORMAT_R64_FLOAT,
+        8,   // RPS_FORMAT_R64_UINT,
+        8,   // RPS_FORMAT_R64_SINT,
         //
         // RPS_FORMAT_COUNT,
     };
@@ -259,6 +262,9 @@ const char* rpsFormatGetName(RpsFormat format)
         "P8",
         "A8P8",
         "B4G4R4A4_UNORM",
+        "R64_FLOAT",
+        "R64_UINT",
+        "R64_SINT"
     };
 
     static_assert(RPS_COUNTOF(fmtNames) == RPS_FORMAT_COUNT, "Format name table needs update.");

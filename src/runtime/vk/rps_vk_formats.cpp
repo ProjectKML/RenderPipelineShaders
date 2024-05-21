@@ -130,6 +130,9 @@ VkFormat rpsFormatToVK(RpsFormat rpsFmt)
         VK_FORMAT_UNDEFINED,                    // RPS_FORMAT_P8,                                      ///<
         VK_FORMAT_UNDEFINED,                    // RPS_FORMAT_A8P8,                                    ///<
         VK_FORMAT_A4R4G4B4_UNORM_PACK16_EXT,    // RPS_FORMAT_B4G4R4A4_UNORM,                          ///<
+        VK_FORMAT_R64_SFLOAT,                   // RPS_FORMAT_R64_FLOAT                                ///<
+        VK_FORMAT_R64_UINT,                     // RPS_FORMAT_R64_UINT                                 ///<
+        VK_FORMAT_R64_SINT,                     // RPS_FORMAT_R64_SINT                                 ///<
     };
 
     static_assert(RPS_COUNTOF(formatMap) == RPS_FORMAT_COUNT, "RpsFormat to VkFormat map needs update");
@@ -250,9 +253,9 @@ RpsFormat rpsFormatFromVK(VkFormat vkFormat)
         RPS_FORMAT_R32G32B32A32_UINT,           // VK_FORMAT_R32G32B32A32_UINT
         RPS_FORMAT_R32G32B32A32_SINT,           // VK_FORMAT_R32G32B32A32_SINT
         RPS_FORMAT_R32G32B32A32_FLOAT,          // VK_FORMAT_R32G32B32A32_SFLOAT
-        RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64_UINT
-        RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64_SINT
-        RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64_SFLOAT
+        RPS_FORMAT_R64_UINT,                    // VK_FORMAT_R64_UINT
+        RPS_FORMAT_R64_INT,                     // VK_FORMAT_R64_SINT
+        RPS_FORMAT_R64_FLOAT,                   // VK_FORMAT_R64_SFLOAT
         RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64G64_UINT
         RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64G64_SINT
         RPS_FORMAT_UNKNOWN,                     // VK_FORMAT_R64G64_SFLOAT

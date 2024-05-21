@@ -291,6 +291,11 @@ typedef enum RpsFormat
     RPS_FORMAT_A8P8,            ///< RGB video resource format with 8-bit palletization.
     RPS_FORMAT_B4G4R4A4_UNORM,  ///< 4-channels BGRA format with each channel being a normalized 4-bit unsigned integer.
 
+    RPS_FORMAT_R64_FLOAT,     ///< Single channel R format with the channel being a 64-bit IEEE 754 floating point
+                              ///  value.
+    RPS_FORMAT_R64_UINT,      ///< Single channel R format with the channel being a 64-bit unsigned integer.
+    RPS_FORMAT_R64_SINT,      ///< Single channel R format with the channel being a 64-bit signed integer.
+
     RPS_FORMAT_COUNT,  ///< Number of formats available in <c><i>RpsFormat</i></c>.
 } RpsFormat;
 
