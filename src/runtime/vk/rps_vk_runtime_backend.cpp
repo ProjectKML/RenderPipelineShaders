@@ -676,8 +676,8 @@ namespace rps
         // For depth stencil, need additional clear flags from rpInfo in case we want to clear only depth or stencil aspect.
         const bool bIsDepthStencil = !!(access.access.accessFlags & RPS_ACCESS_DEPTH_STENCIL);
         const bool bShouldClearDepthStencil =
-            IsStencil ? (rpInfo.clearDepth && (access.access.accessFlags & RPS_ACCESS_DEPTH))
-                      : (rpInfo.clearStencil && (access.access.accessFlags & RPS_ACCESS_STENCIL));
+            IsStencil ? (rpInfo.clearStencil && (access.access.accessFlags & RPS_ACCESS_STENCIL))
+                      : (rpInfo.clearDepth && (access.access.accessFlags & RPS_ACCESS_DEPTH));
 
         static constexpr RpsAccessFlags DiscardAccessMask =
             (IsStencil ? RPS_ACCESS_STENCIL_DISCARD_DATA_BEFORE_BIT : RPS_ACCESS_DISCARD_DATA_BEFORE_BIT);
