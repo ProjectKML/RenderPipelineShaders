@@ -898,7 +898,7 @@ namespace rps
                             renderingInfo.pDepthAttachment = &depthAttachment;
                         }
 
-                        if (accessInfo.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
+                        /*TOOD: fix stencil if (accessInfo.access.accessFlags & (RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STENCIL_READ_BIT))
                         {
                             stencilAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
                             stencilAttachment.imageView = imgView;
@@ -913,7 +913,7 @@ namespace rps
                             }
 
                             renderingInfo.pStencilAttachment = &stencilAttachment;
-                        }
+                        }*/
                     }
                 }
 
