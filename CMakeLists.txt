@@ -12,6 +12,8 @@ cmake_minimum_required(VERSION 3.12.1)
 cmake_policy(SET CMP0126 NEW)
 cmake_policy(SET CMP0077 NEW)
 
+set(CMAKE_CXX_STANDARD 20)
+
 option( RpsBuildTests "Enable unit test targets" ON )
 option( RpsBuildTools "Enable tool targets" ON )
 option( RpsBuildExamples "Enable example targets" ON )

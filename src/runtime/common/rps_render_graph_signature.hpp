@@ -104,7 +104,7 @@ namespace rps
         static constexpr RpsShaderStageFlags GfxShaderStages = (RPS_SHADER_STAGE_ALL & (~RPS_SHADER_STAGE_CS));
 
         static constexpr RpsAccessFlags ShaderStageDependentAccessMask =
-            RPS_ACCESS_SHADER_RESOURCE_BIT | RPS_ACCESS_UNORDERED_ACCESS_BIT;
+            RPS_ACCESS_SHADER_RESOURCE_BIT | RPS_ACCESS_UNORDERED_ACCESS;
 
         if ((access.accessFlags & RPS_ACCESS_ALL_GPU) == 0)
         {

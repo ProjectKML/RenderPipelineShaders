@@ -101,10 +101,10 @@ namespace rps
                 }
             }
 
-            if (rpsAnyBitsSet(accessFlags, RPS_ACCESS_UNORDERED_ACCESS_BIT))
+            if (rpsAnyBitsSet(accessFlags, RPS_ACCESS_UNORDERED_ACCESS))
             {
                 print((accessFlagsMask == accessFlags) ? "" : ", ");
-                accessFlagsMask &= ~RPS_ACCESS_UNORDERED_ACCESS_BIT;
+                accessFlagsMask &= ~RPS_ACCESS_UNORDERED_ACCESS;
 
                 print("uav(");
                 printShaderStages();

@@ -286,7 +286,7 @@ namespace rps
         if (rpsAnyBitsSet(resInfo.allAccesses.accessFlags, RPS_ACCESS_CONSTANT_BUFFER_BIT))
             vkUsageFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         if (rpsAnyBitsSet(resInfo.allAccesses.accessFlags,
-                          RPS_ACCESS_UNORDERED_ACCESS_BIT | RPS_ACCESS_SHADER_RESOURCE_BIT))
+                          RPS_ACCESS_UNORDERED_ACCESS | RPS_ACCESS_SHADER_RESOURCE_BIT))
             vkUsageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (rpsAnyBitsSet(resInfo.allAccesses.accessFlags, RPS_ACCESS_INDEX_BUFFER_BIT))
             vkUsageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;

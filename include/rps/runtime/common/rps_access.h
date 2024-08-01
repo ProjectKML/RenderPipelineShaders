@@ -33,79 +33,82 @@
 typedef enum RpsAccessFlagBits
 {
     // Basic access flags
-    RPS_ACCESS_UNKNOWN              = 0,           ///< Unknown access.
-    RPS_ACCESS_INDIRECT_ARGS_BIT    = 1 << 0,      ///< Accessible as an indirect argument buffer.
-    RPS_ACCESS_INDEX_BUFFER_BIT     = 1 << 1,      ///< Accessible as an index buffer.
-    RPS_ACCESS_VERTEX_BUFFER_BIT    = 1 << 2,      ///< Accessible as a vertex buffer.
-    RPS_ACCESS_CONSTANT_BUFFER_BIT  = 1 << 3,      ///< Accessible as a constant buffer.
-    RPS_ACCESS_SHADER_RESOURCE_BIT  = 1 << 4,      ///< Accessible as a shader resource (readonly) view.
-    RPS_ACCESS_UNORDERED_ACCESS_BIT = 1 << 5,      ///< Accessible as a unordered access (shader readwrite) view.
-    RPS_ACCESS_SHADING_RATE_BIT     = 1 << 6,      ///< Accessible as a shading rate image in a Variable Rate Shading
+    RPS_ACCESS_UNKNOWN                    = 0,           ///< Unknown access.
+    RPS_ACCESS_INDIRECT_ARGS_BIT          = 1 << 0,      ///< Accessible as an indirect argument buffer.
+    RPS_ACCESS_INDEX_BUFFER_BIT           = 1 << 1,      ///< Accessible as an index buffer.
+    RPS_ACCESS_VERTEX_BUFFER_BIT          = 1 << 2,      ///< Accessible as a vertex buffer.
+    RPS_ACCESS_CONSTANT_BUFFER_BIT        = 1 << 3,      ///< Accessible as a constant buffer.
+    RPS_ACCESS_SHADER_RESOURCE_BIT        = 1 << 4,      ///< Accessible as a shader resource (readonly) view.
+    RPS_ACCESS_UNORDERED_ACCESS_READ_BIT  = 1 << 5,
+    RPS_ACCESS_UNORDERED_ACCESS_WRITE_BIT = 1 << 6,      ///< Accessible as a unordered access (shader readwrite) view.
+    RPS_ACCESS_SHADING_RATE_BIT           = 1 << 7,      ///< Accessible as a shading rate image in a Variable Rate Shading
                                                    ///  (VRS) pass.
-    RPS_ACCESS_RENDER_TARGET_BIT       = 1 << 7,   ///< Accessible as a render target view.
-    RPS_ACCESS_DEPTH_READ_BIT          = 1 << 8,   ///< Accessible as a readonly depth view.
-    RPS_ACCESS_DEPTH_WRITE_BIT         = 1 << 9,   ///< Accessible as a writable depth view.
-    RPS_ACCESS_STENCIL_READ_BIT        = 1 << 10,  ///< Accessible as a readonly stencil view.
-    RPS_ACCESS_STENCIL_WRITE_BIT       = 1 << 11,  ///< Accessible as a writable stencil view.
-    RPS_ACCESS_STREAM_OUT_BIT          = 1 << 12,  ///< Accessible for write as a stream out buffer.
-    RPS_ACCESS_COPY_SRC_BIT            = 1 << 13,  ///< Accessible as a copy source.
-    RPS_ACCESS_COPY_DEST_BIT           = 1 << 14,  ///< Accessible as a copy target.
-    RPS_ACCESS_RESOLVE_SRC_BIT         = 1 << 15,  ///< Accessible as a resolve source.
-    RPS_ACCESS_RESOLVE_DEST_BIT        = 1 << 16,  ///< Accessible as a resolve target.
-    RPS_ACCESS_RAYTRACING_AS_BUILD_BIT = 1 << 17,  ///< Accessible for write (build) as a raytracing acceleration
+    RPS_ACCESS_RENDER_TARGET_BIT          = 1 << 8,   ///< Accessible as a render target view.
+    RPS_ACCESS_DEPTH_READ_BIT             = 1 << 9,   ///< Accessible as a readonly depth view.
+    RPS_ACCESS_DEPTH_WRITE_BIT            = 1 << 10,   ///< Accessible as a writable depth view.
+    RPS_ACCESS_STENCIL_READ_BIT           = 1 << 11,  ///< Accessible as a readonly stencil view.
+    RPS_ACCESS_STENCIL_WRITE_BIT          = 1 << 12,  ///< Accessible as a writable stencil view.
+    RPS_ACCESS_STREAM_OUT_BIT             = 1 << 13,  ///< Accessible for write as a stream out buffer.
+    RPS_ACCESS_COPY_SRC_BIT               = 1 << 14,  ///< Accessible as a copy source.
+    RPS_ACCESS_COPY_DEST_BIT              = 1 << 15,  ///< Accessible as a copy target.
+    RPS_ACCESS_RESOLVE_SRC_BIT            = 1 << 16,  ///< Accessible as a resolve source.
+    RPS_ACCESS_RESOLVE_DEST_BIT           = 1 << 17,  ///< Accessible as a resolve target.
+    RPS_ACCESS_RAYTRACING_AS_BUILD_BIT    = 1 << 18,  ///< Accessible for write (build) as a raytracing acceleration
                                                    ///  structure.
-    RPS_ACCESS_RAYTRACING_AS_READ_BIT = 1 << 18,   ///< Accessible for read as a raytracing acceleration structure.
-    RPS_ACCESS_PRESENT_BIT            = 1 << 19,   ///< Accessible as a present source.
-    RPS_ACCESS_CPU_READ_BIT           = 1 << 20,   ///< Accessible for reads by the CPU.
-    RPS_ACCESS_CPU_WRITE_BIT          = 1 << 21,   ///< Accessible for writes by the CPU.
+    RPS_ACCESS_RAYTRACING_AS_READ_BIT     = 1 << 19,   ///< Accessible for read as a raytracing acceleration structure.
+    RPS_ACCESS_PRESENT_BIT                = 1 << 20,   ///< Accessible as a present source.
+    RPS_ACCESS_CPU_READ_BIT               = 1 << 21,   ///< Accessible for reads by the CPU.
+    RPS_ACCESS_CPU_WRITE_BIT              = 1 << 22,   ///< Accessible for writes by the CPU.
 
     // Additional decorator flags not for standalone use but instead for combination with basic access flags.
 
     /// Access does not read existing data so it can be discarded. Does not apply to the stencil aspect.
-    RPS_ACCESS_DISCARD_DATA_BEFORE_BIT = 1 << 22,
+    RPS_ACCESS_DISCARD_DATA_BEFORE_BIT = 1 << 23,
 
     /// Data can be discarded after current access (node). Does not apply to the stencil aspect.
     /// This is typically not programmed directly, but added internally during subresource data lifetime analysis
     /// based on if the data will be accessed afterwards. However it can be used to force discarding the data.
-    RPS_ACCESS_DISCARD_DATA_AFTER_BIT = 1 << 23,
+    RPS_ACCESS_DISCARD_DATA_AFTER_BIT = 1 << 24,
 
     /// Stencil access does not read existing data so it can be discarded. Applies only to the stencil aspect.
-    RPS_ACCESS_STENCIL_DISCARD_DATA_BEFORE_BIT = 1 << 24,
+    RPS_ACCESS_STENCIL_DISCARD_DATA_BEFORE_BIT = 1 << 25,
 
     /// Stencil data can be discarded after current access (node). Applies only to the stencil aspect.
     /// This is typically not programmed directly, but added internally during subresource data lifetime analysis
     /// based on if the data will be accessed afterwards. However it can be used to force discarding the data.
-    RPS_ACCESS_STENCIL_DISCARD_DATA_AFTER_BIT = 1 << 25,
+    RPS_ACCESS_STENCIL_DISCARD_DATA_AFTER_BIT = 1 << 26,
 
     /// Initial state when entering the node. This allows a view to have a different state at entering and exiting,
     /// in case the node implementation needs to perform a transition but does not want to transition it back to the
     /// original state. Not implemented yet.
-    RPS_ACCESS_BEFORE_BIT = 1 << 26,
+    RPS_ACCESS_BEFORE_BIT = 1 << 27,
 
     /// Final state when exiting the node. This allows a view to have a different state at entering and exiting,
     /// in case the node implementation needs to perform a transition but does not want to transition it back to the
     /// original state. Not implemented yet.
-    RPS_ACCESS_AFTER_BIT = 1 << 27,
+    RPS_ACCESS_AFTER_BIT = 1 << 28,
 
     /// View is cleared before the current access. Usually used together with other basic access flags.
-    RPS_ACCESS_CLEAR_BIT = 1 << 28,
+    RPS_ACCESS_CLEAR_BIT = 1 << 29,
 
     /// Access can be used by a render pass attachment (as render target or depth stencil). Used to distinguish clear-only
     /// accesses (which may use special clear commands) and render target / depth stencil view accesses.
-    RPS_ACCESS_RENDER_PASS = 1 << 29,
+    RPS_ACCESS_RENDER_PASS = 1 << 30,
 
     /// Access does not care about the ordering with regard to other accesses which also have the
     /// RPS_ACCESS_RELAXED_ORDER_BIT flag.
-    RPS_ACCESS_RELAXED_ORDER_BIT = 1 << 30,
+    RPS_ACCESS_RELAXED_ORDER_BIT = 1 << 31,
 
     /// Access does not need a resource view to be created, (e.g. via
     /// ID3D12GraphicsCommandList::CopyResource).
-    RPS_ACCESS_NO_VIEW_BIT = 1 << 31,
+    RPS_ACCESS_NO_VIEW_BIT = 1 << 32,
 
     // Aliases
 
     /// Accessible as a predication buffer.
     RPS_ACCESS_PREDICATION_BIT = RPS_ACCESS_INDIRECT_ARGS_BIT,
+
+    RPS_ACCESS_UNORDERED_ACCESS = RPS_ACCESS_UNORDERED_ACCESS_READ_BIT | RPS_ACCESS_UNORDERED_ACCESS_WRITE_BIT,
 
     /// Depth read write access.
     RPS_ACCESS_DEPTH = RPS_ACCESS_DEPTH_READ_BIT | RPS_ACCESS_DEPTH_WRITE_BIT,
@@ -123,7 +126,7 @@ typedef enum RpsAccessFlagBits
     RPS_ACCESS_DEPTH_STENCIL = RPS_ACCESS_DEPTH_STENCIL_READ | RPS_ACCESS_DEPTH_STENCIL_WRITE,
 
     /// Bitwise OR of all possible GPU writeable access flags.
-    RPS_ACCESS_ALL_GPU_WRITE = RPS_ACCESS_RENDER_TARGET_BIT | RPS_ACCESS_UNORDERED_ACCESS_BIT |
+    RPS_ACCESS_ALL_GPU_WRITE = RPS_ACCESS_RENDER_TARGET_BIT | RPS_ACCESS_UNORDERED_ACCESS_WRITE_BIT |
                                RPS_ACCESS_DEPTH_WRITE_BIT | RPS_ACCESS_STENCIL_WRITE_BIT | RPS_ACCESS_STREAM_OUT_BIT |
                                RPS_ACCESS_COPY_DEST_BIT | RPS_ACCESS_RESOLVE_DEST_BIT |
                                RPS_ACCESS_RAYTRACING_AS_BUILD_BIT,
@@ -147,7 +150,7 @@ typedef enum RpsAccessFlagBits
 } RpsAccessFlagBits;
 
 /// @brief Bitmask type for <c><i>RpsAccessFlagBits</i></c>.
-typedef RpsFlags32 RpsAccessFlags;
+typedef RpsFlags64 RpsAccessFlags;
 
 /// @brief Bitflags for shader stages.
 typedef enum RpsShaderStageBits

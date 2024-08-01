@@ -570,7 +570,7 @@ namespace rps
                     }
 
                     static constexpr RpsAccessFlags AccessMaskMayNeedCreateView =
-                        RPS_ACCESS_CONSTANT_BUFFER_BIT | RPS_ACCESS_UNORDERED_ACCESS_BIT |
+                        RPS_ACCESS_CONSTANT_BUFFER_BIT | RPS_ACCESS_UNORDERED_ACCESS |
                         RPS_ACCESS_SHADER_RESOURCE_BIT | RPS_ACCESS_RENDER_TARGET_BIT | RPS_ACCESS_DEPTH_STENCIL |
                         RPS_ACCESS_RESOLVE_DEST_BIT;
 

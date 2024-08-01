@@ -505,7 +505,7 @@ namespace rps
 
                 accessTransInfo.bKeepOrdering = !relaxOrdering;
 
-                const bool isUav = rpsAnyBitsSet(before.accessFlags, RPS_ACCESS_UNORDERED_ACCESS_BIT);
+                const bool isUav = rpsAnyBitsSet(before.accessFlags, RPS_ACCESS_UNORDERED_ACCESS);
 
                 // By default UAV to UAV access needs a sync, unless RELAXED_ORDER is specified on both access.
                 accessTransInfo.bTransition = (before != after) || (isUav && !relaxOrdering);
