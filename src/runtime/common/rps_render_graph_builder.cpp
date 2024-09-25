@@ -386,6 +386,7 @@ namespace rps
         pOp->nodeDeclId = nodeDeclId;
         pOp->callback   = callback;
         pOp->args       = m_cmdArena.NewArray<RpsVariable>(numArgs);
+        pOp->tag        = localNodeId;
         std::copy(pArgs, pArgs + numArgs, pOp->args.begin());
 
         auto& cmdInfos = m_renderGraph.GetCmdInfos();
